@@ -1,0 +1,9 @@
+[Unit]
+Description=Perdiodically dumps MTConnect agent data to disk
+After=network.target
+
+[Service]
+ExecStart=/usr/local/bin/mtconnect_dumper --url http://10.1.1.22:5000 /var/lib/mtconnect_dumper/
+
+[Install]
+WantedBy=multi-user.target

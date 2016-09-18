@@ -1,0 +1,8 @@
+/var/lib/mtconnect_dumper/mtconnect_*.xml
+{
+	monthly
+	rotate 12
+	compress
+	delaycompress
+	missingok
+}

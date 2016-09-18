@@ -44,16 +44,21 @@ def dump(url, prefix, destination):
     while url.endswith('/'):
         url = url[:-1]
     seqno = 0
-    count = 100000
+    count = 1000000
+    remove_filename = None
     while True:
         u = "%s/sample?from=%d&count=%d" % (url, seqno, count)
         logger.debug("About to request: %s" % u)
         req = requests.get(u, stream=True)
+        filename = None
+        got = None
         if req.status_code == 200:
+            got = None
             xml = req.raw.read()
             mts = MTConnectSample(xml)
             errors = mts.root.find('./Errors')
             lowerbound = None
+            maxcount = None
             if errors is not None:
                 oors = errors.findall("./Error[@errorCode='OUT_OF_RANGE']")
                 if len(oors) > 0:
@@ -61,41 +66,72 @@ def dump(url, prefix, destination):
                     # out if the requested 'from' value is below the first held
                     # sequence number. Get that minimum number and get that
                     # instead.
-                    m = re.match("^.*must be greater than or equal to (?P<lowerbound>\d+)\.$", oors[0].text)
+                    m = re.match("^.*from.*must be greater than or equal to (?P<lowerbound>\d+)\.$", oors[0].text)
                     if m:
                         lowerbound = int(m.groupdict()['lowerbound'])
-                if lowerbound == None:
+                    # If the agent has a buffer smaller than what we requested
+                    # in count, it will tell us to use this.
+                    m = re.match("^.*count.*must be less than or equal to "
+                            "(?P<maxcount>\d+)\.$", oors[0].text)
+                    if m:
+                        maxcount = int(m.groupdict()['maxcount'])
+                if lowerbound == None and maxcount == None:
                     logger.error('XML contained unknown error')
+                    logger.debug(repr(xml))
 
             if lowerbound != None:
                 logger.warn("Agent misses data down to sequence number %d. It advises to try %d." % (seqno, lowerbound))
                 seqno = lowerbound
+            elif maxcount != None:
+                logger.warn("Agent informed us to request a maximum of "
+                        "%d sequences at once instead of %d. Will do "
+                        "in next request.", maxcount, count)
+                count = maxcount
             else:
-                # Write data to file.
-                date = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z').replace(':','.')
-                filename = os.path.join(destination, "%s%s.xml" % (prefix,
-                    date))
-                with open(filename, 'wb') as f:
-                    f.write(xml)
-
                 # Get the next sequence number to request.
                 header = mts.root.find('./Header')
                 first_seq = int(header.get('firstSequence'))
                 last_seq = int(header.get('lastSequence'))
                 next_seq = int(header.get('nextSequence'))
-                logger.debug("Sequence numbers agent holds: %d-%d, next is %d, got %d",
-                        first_seq, last_seq, next_seq, next_seq-seqno)
+                got = next_seq-seqno
+                logger.debug("Sequence numbers agent holds: %d-%d, next is %d, "
+                        "got %d starting from %d",
+                        first_seq, last_seq, next_seq, next_seq-seqno, seqno)
+                # Write data to file.
+                date = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z').replace(':','.')
+                filename = os.path.join(destination, "%s%09d-%d_%s.xml" %
+                        (prefix, seqno, got, date))
+                logger.debug("Writing to file: %s", filename)
+                with open(filename, 'wb') as f:
+                    f.write(xml)
+
+                if remove_filename:
+                    logger.debug("Removing empty last XML file: %s",
+                            remove_filename)
+                    os.unlink(remove_filename)
+                    remove_filename = None
+
                 seqno = next_seq
         else:
             logger.error("Requesting '%s' failed with code %d" % (u,
                 req.status_code))
 
-        if lowerbound == seqno:
+        if lowerbound == seqno or maxcount != None:
             # We have been advised that this is the lowest sequence number the
-            # agent holds. Request from there immediately.
+            # agent holds or to use lower count. Doing that immediately.
             logger.debug('Requesting immediately.')
         else:
-            time.sleep(10)
+            if got == 0:
+                if filename:
+                    # That file contains no sequences. We'll remove it once the
+                    # next request is successful.
+                    remove_filename = filename
+                time.sleep(20)
+            elif got == count:
+                # There is more - go get it.
+                time.sleep(1)
+            else:
+                time.sleep(10)
 
 if __name__ == '__main__':
     dump()

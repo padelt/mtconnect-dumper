@@ -37,14 +37,15 @@ class MTConnectSample():
 @click.command()
 @click.option('--url', default='http://localhost:5000', help="URL to MTConnect endpoint.")
 @click.option('--prefix', default='mtconnect_', help="Start filenames with this.")
+@click.option('--initial-count', default=1000000, help="Number of sequences to start requesting with.")
 @click.argument('destination', callback=validate_directory)
 @click_log.simple_verbosity_option()
 @click_log.init(__name__)
-def dump(url, prefix, destination):
+def dump(url, prefix, initial_count, destination):
     while url.endswith('/'):
         url = url[:-1]
     seqno = 0
-    count = 1000000
+    count = initial_count
     connect_timeout_s = 5
     read_timeout_s = 60
     remove_filename = None

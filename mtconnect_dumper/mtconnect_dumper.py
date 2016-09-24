@@ -105,7 +105,7 @@ def dump(url, prefix, initial_count, destination):
                             first_seq, last_seq, next_seq, next_seq-seqno, seqno)
                     # Write data to file.
                     date = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z').replace(':','.')
-                    filename = os.path.join(destination, "%s%s_%19d-%d.xml" %
+                    filename = os.path.join(destination, "%s%s_%019d-%d.xml" %
                             (prefix, date, seqno, got))
                     logger.debug("Writing to file: %s", filename)
                     with open(filename, 'wb') as f:
@@ -132,7 +132,8 @@ def dump(url, prefix, initial_count, destination):
                     # That file contains no sequences. We'll remove it once the
                     # next request is successful.
                     remove_filename = filename
-                time.sleep(20)
+                # Not much to do at the moment. May be night or weekend. Relax.
+                time.sleep(600)
             elif got == count:
                 # There is more - go get it.
                 time.sleep(1)

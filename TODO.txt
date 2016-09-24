@@ -1,0 +1,1 @@
+Insert instanceid into filename (and maybe events?) to detect restarted sequenceid.

@@ -83,7 +83,7 @@ def dump(url, prefix, initial_count, destination):
                             maxcount = int(m.groupdict()['maxcount'])
                     if lowerbound == None and maxcount == None:
                         logger.error('XML contained unknown error')
-                        logger.debug(repr(xml))
+                        logger.error(repr(xml))
 
                 if lowerbound != None:
                     logger.warn("Agent misses data down to sequence number %d. It advises to try %d." % (seqno, lowerbound))

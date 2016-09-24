@@ -4,6 +4,8 @@ After=network.target
 
 [Service]
 ExecStart=/usr/local/bin/mtconnect_dumper --url http://10.1.1.22:5000 /var/lib/mtconnect_dumper/
+Restart=always
+RestartSec=60
 
 [Install]
 WantedBy=multi-user.target

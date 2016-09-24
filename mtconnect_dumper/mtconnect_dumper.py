@@ -105,8 +105,8 @@ def dump(url, prefix, initial_count, destination):
                             first_seq, last_seq, next_seq, next_seq-seqno, seqno)
                     # Write data to file.
                     date = datetime.now(timezone.utc).isoformat().replace('+00:00', 'Z').replace(':','.')
-                    filename = os.path.join(destination, "%s%09d-%d_%s.xml" %
-                            (prefix, seqno, got, date))
+                    filename = os.path.join(destination, "%s%s_%19d-%d.xml" %
+                            (prefix, date, seqno, got))
                     logger.debug("Writing to file: %s", filename)
                     with open(filename, 'wb') as f:
                         f.write(xml)
